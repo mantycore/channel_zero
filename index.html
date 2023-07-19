@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>channel_zero</title>
+        <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+        <style>
+            body {
+                margin: 0;
+            }
+            main {
+                max-width: 800px;
+                min-width: 600px;
+                margin: 0 auto;
+                display: flex;
+                height: 100vh;
+                max-height: 100vh;
+            }
+            .channel {
+                min-width: 600px;
+                display: flex;
+                flex-direction: column;
+            }
+            .posts {
+                flex: 1;
+                margin: 8px;
+                overflow-y: auto;
+            }
+            .channel > input {
+                margin: 8px;
+            }
+            .date {
+                color: silver;
+                font-size: 10px;
+            }
+            .posts article {
+                margin-bottom: 8px;
+            }
+            .posts > article > .article {
+                display: flex;
+            }
+            .posts > article > .article > .data {
+                flex: 1;
+            }
+            .icon {
+                font-size: 32px;
+                font-weight: bold;
+                height: 40px;
+                width: 40px;
+                margin-right: 8px;
+                color: white;
+                text-align: center;
+            }
+        </style>
+    </head>
+    <body x-data="main()">
+        <template x-if="settings.loginMode === null">
+            <main>
+            <div>
+                <p>
+                    Ничего не показывает Тоху Боху<br>
+                    В Тоху Боху нет паттернов, нет информации, нет контента и нет формата.<br>
+                    Нет ни пульса, ни гармонии в Тоху Боху<br>
+                    Ничего не возникает в Тоху Боху, и нет у него ни места, ни существования<br>
+                    Бесчисленные реальности расходятся от Тоху Боху<br>
+                    В нулевой час есть только Тоху Боху
+                </p>
+                <p>
+                    <button @click="createAccount()">Создать новый аккаунт</button>
+                </p>
+                <!--<template x-if="$store.router.at('')">
+                    <p>
+                        <button @click="login()">Залогиниться</button>
+                    </p>
+                </template>
+                <template x-if="$store.router.at('login')">
+                    <div>
+                        <p>
+                            <button @click="$store.router.navigate('/login_with_private_key')">Залогиниться вводом приватного ключа</button>
+                        </p>
+                        <template x-if="window.nostr && window.nostr.nip04">
+                            <p>
+                                <button @click="completeLogin('NIP-07')">Залогиниться через расширение браузера (предпочтительно)</button>
+                            </p>
+                        </template>
+                    </div>    
+                </template>
+                <template x-if="$store.router.at('login_with_private_key')">
+                    <div>
+                        <label>
+                            <p>Введите приватный ключ Nostr:</p>
+                            <p><input x-model="settings.privateKey"></p>
+                        </label>
+                        <p>
+                            <button @click="completeLogin('privateKey')">Вход</button>
+                        </p>
+                    </div>
+                </template>-->
+            </div>
+            </main>
+        </template>
+        <template x-if="settings.loginMode !== null">
+            <main>
+                <!--
+                <aside>
+                    <input placeholder="Найти канал">
+                    <button @click="createNewChannel()">Создать новый канал</button>
+                </aside>
+                -->
+                <div class="channel">
+                    <div class="posts" >
+                        <template x-if="events && $store.router.at('ch')">
+                            <template x-for="post in getPosts($store.router.id())" >
+                                <article>
+                                    <template x-if="post.plain.kind === 400" x-effect="$nextTick(() => scrollDown($el));">
+                                        <div class="article">
+                                            <div class="icon"></div>
+                                            <div class="data">
+                                                <div class="date" x-text="new Date(post.plain.created_at * 1000).toJSON()"></div>
+                                                Канал был создан
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template x-if="post.plain.kind === 403">
+                                        <div class="article" x-effect="$nextTick(() => scrollDown($el));">
+                                            <div class="icon"
+                                                x-bind:style="`background-color: #${post.plain.pubkey.substring(0, 6)}`"
+                                                x-text="String.fromCharCode(0x2300 + parseInt(post.plain.pubkey.substring(6, 8), 16))"
+                                            ></div>
+                                            <div class="data">
+                                                <div>
+                                                    <template x-if="post.plain.tags.find(tag => tag[0] === 'screenname')">
+                                                        <strong><span x-text="post.plain.tags.find(tag => tag[0] === 'screenname')[1]"></span></strong>
+                                                    </template>
+                                                    <span class="date" x-text="new Date(post.plain.created_at * 1000).toJSON()"></span>
+                                                </div>
+                                                <div x-html="post.plain.content.replace(/\n/g, '<br>')">
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template x-if="post.plain.kind === 410">
+                                        <div class="article" x-effect="$nextTick(() => scrollDown($el));">
+                                            <div class="icon"
+                                                x-bind:style="`background-color: #${post.plain.pubkey.substring(0, 6)}`"
+                                                x-text="String.fromCharCode(0x2300 + parseInt(post.plain.pubkey.substring(6, 8), 16))"
+                                            ></div>
+                                            <div class="data">
+                                                <div class="date" x-text="new Date(post.plain.created_at * 1000).toJSON()"></div>
+                                                <div><em>теперь зовётся <span x-text="JSON.parse(post.plain.content).name"></span></em></div>
+                                            </div>
+                                        </div>
+                                    </template>                                    
+                                </article>
+                            </template>
+                        </template>
+                    </div>
+                    <template x-if="optionsShowed">
+                        <div style="display: flex; width: 100%;">
+                            <template x-if="!optionsNameShowed">
+                                <button @click="optionsNameShowed = true">Изменить имя</button>
+                            </template>
+                            <template x-if="optionsNameShowed">
+                                <div style="display: flex;">
+                                    <label>Введите новое имя: <input x-model="screenname" @keyup.enter="saveName()"></label><button @click="saveName()">Сохранить</button><button @click="optionsNameShowed = false">Отмена</button>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    <div style="display: flex; width: 100%;">
+                        <button @click="optionsShowed = !optionsShowed">⚙</button>
+                        <textarea
+                            x-data="{ctrlPressed: false}"
+                            x-init="$el.style.height = '5px'; $el.style.height = ($el.scrollHeight) + 'px';"
+                            @input="$el.style.height = '5px'; $el.style.height = ($el.scrollHeight) + 'px';"
+                            x-model="postText"
+                            @keydown.ctrl="ctrlPressed = true"
+                            @keyup.ctrl="ctrlPressed = false"
+                            @keyup.enter="if (ctrlPressed) { sendPost(); }"
+                            style="flex: 1;"
+                        ></textarea>
+                        <button @click="sendPost()">Отправить</button>
+                    </div>
+                </div>
+            </main>
+        </template>
+        <script>
+const pool = new window.NostrTools.SimplePool();
+const relays = ['wss://relay.anoma.li', 'ws://139.59.52.81:7000'];
+const main = () => ({
+    optionsShowed: false,
+    optionsNameShowed: false,
+    screenname: '', //TODO: screenname per channel!
+    screennameTimestamp: 0,
+    async saveName() {
+        await this.updateUserMetadata();
+        optionsNameShowed = false;
+    },
+    settings: {
+        privateKey: '',
+        publicKey: null,
+        loginMode: null,
+        channels: {}
+    },
+    events: {},
+    sub: null,
+    postText: '',
+    scrollDown(element) {
+        const posts = element.closest('.posts');
+        posts.scrollTo(0, posts.scrollHeight);
+    },
+    getPosts(channelPublicKey) {
+        let posts = Object.values(this.events).filter(event => event.cypher.tags[0][1] === channelPublicKey);
+        posts = posts.sort((a, b) => a.plain.created_at - b.plain.created_at);
+        return posts;
+    },
+    async processEvent(event) {
+        const json = await window.NostrTools.nip04.decrypt(
+            this.settings.channels[event.tags[0][1]].privateKey,
+            event.pubkey,
+            event.content
+        );
+        const plainEvent = JSON.parse(json);
+        this.events[event.id] = {
+            cypher: event,
+            plain: plainEvent
+        }
+        if (plainEvent.kind === 410 && plainEvent.pubkey === this.settings.publicKey && plainEvent.created_at > this.screennameTimestamp) {
+            this.screenname = JSON.parse(plainEvent.content).name;
+            this.screennameTimestamp = plainEvent.created_at;
+        }
+    },
+    resub() {
+        if (this.sub !== null) {
+            this.sub.unsub();
+        }
+        this.sub = pool.sub(relays, [{"#p": [
+            this.settings.publicKey,
+            ...Object.keys(this.settings.channels)
+        ]}]);
+        this.sub.on('event', event => this.processEvent(event));
+    },
+    async init() {
+        const settings = window.localStorage.getItem('settings');
+        if (settings !== null) {
+            this.settings = JSON.parse(settings);
+            if (this.settings.channels === undefined) {
+                this.settings.channels = {}
+            }
+            this.resub();
+        }
+        const i = Alpine.store('router').param('i');
+        if (i !== undefined) {
+            const publicKey = window.NostrTools.getPublicKey(i);
+            this.settings.channels[publicKey] = {privateKey: i};
+            this.resub();
+            window.localStorage.setItem('settings', JSON.stringify(this.settings));
+            Alpine.store('router').unset('i');
+        }
+    },
+    login() {
+        window.nostr && window.nostr.nip04
+            ? Alpine.store('router').navigate('/login')
+            : Alpine.store('router').navigate('/login_with_private_key');
+    },
+    async completeLogin(mode) {
+        if(mode === 'NIP-07' || this.settings.privateKey !== '') {
+            this.settings.loginMode = mode;
+            //TODO: check correctness
+            if(mode === 'privateKey') {
+                const publicKey = window.NostrTools.getPublicKey(this.settings.privateKey)
+                this.settings.publicKey = publicKey;
+            } else {
+                this.settings.publicKey = await window.nostr.getPublicKey();
+            }
+            window.localStorage.setItem('settings', JSON.stringify(this.settings));
+        }
+
+        //TODO: handle redirect
+        
+        Alpine.store('router').navigate('/ch/ebdb4d1649d8dd8f6e4e355353738f936c45f63977770928ba039ffc18dd01d2');
+    },
+    createAccount() {
+        this.settings.privateKey = window.NostrTools.generatePrivateKey();
+        this.settings.publicKey = window.NostrTools.getPublicKey(this.settings.privateKey);
+        this.settings.loginMode = 'privateKey';
+        window.localStorage.setItem('settings', JSON.stringify(this.settings));
+        Alpine.store('router').navigate('/ch/ebdb4d1649d8dd8f6e4e355353738f936c45f63977770928ba039ffc18dd01d2');
+    },
+    sign(event, privateKey) {
+        event.pubkey = window.NostrTools.getPublicKey(privateKey);
+        event.id = window.NostrTools.getEventHash(event);
+        event.sig = window.NostrTools.getSignature(event, privateKey);
+        return event;
+    },
+    async giftWrap(event, destination) {
+        event.created_at = Math.floor(Date.now() / 1000);
+        const signedEvent = this.sign(event, this.settings.privateKey);
+        const privateKey = window.NostrTools.generatePrivateKey();
+        const encryptedEvent = await window.NostrTools.nip04.encrypt(privateKey, destination, JSON.stringify(signedEvent)); //TODO: use 44
+        const wrappedEvent = this.sign({
+            content: encryptedEvent,
+            kind: 1059,
+            created_at: Math.floor(Date.now() / 1000),
+            tags: [["p", destination]],
+        }, privateKey);
+        this.events[wrappedEvent.id] = {
+            cypher: wrappedEvent,
+            plain: event
+        };
+        this.send(wrappedEvent);
+    },
+    async createNewChannel() {
+        const name = 'Изнанки';
+        const channelPrivateKey = window.NostrTools.generatePrivateKey();
+        const channelPublicKey = window.NostrTools.getPublicKey(channelPrivateKey);
+        const content = JSON.stringify({name});
+
+        const event = {
+            content,
+            kind: 400,
+            tags: [["r", "wss://anoma.ch"]]
+        };
+        await this.giftWrap(event, channelPublicKey);
+        //console.log(`https://zero.anoma.ch/#/i/${channelPrivateKey}`)
+        this.settings.channels[channelPublicKey] = {privateKey: channelPrivateKey, name}
+        window.localStorage.setItem('settings', JSON.stringify(this.settings));
+        this.resub()
+        Alpine.store('router').navigate(`/ch/${channelPublicKey}`);
+    },
+    async sendPost() {
+        console.log("sendPost");
+        const channelPublicKey = Alpine.store('router').id(); //TODO: check correctness
+        const event = {
+            content: this.postText,
+            kind: 403,
+            tags: [["e", channelPublicKey, "wss://anoma.ch"]]
+        };
+        if (this.screenname !== "") {
+            event.tags.push(["screenname", this.screenname]);
+        }
+        await this.giftWrap(event, channelPublicKey);
+        this.postText = '';
+    },
+    async updateUserMetadata() {
+        const channelPublicKey = Alpine.store('router').id(); //TODO: check correctness
+        const event = {
+            content: JSON.stringify({name: this.screenname}), // about, picture
+            kind: 410, // == non-wrapped 0
+            tags: [["e", channelPublicKey, "wss://anoma.ch"]]
+        }
+        await this.giftWrap(event, channelPublicKey);
+    },
+    send(event) {
+        pool.publish(relays, event);
+    }
+});
+
+function paramsToString(params) {
+    return '?' + Object.entries(params)
+        .map(([key, value]) => `${key}=${value}`).join('&');
+}
+
+const routerStore = {
+    route: ['#'],
+    params: {},
+    init() {
+        this.updateRouteFromHash();
+        window.addEventListener('hashchange', () => this.updateRouteFromHash());
+    },
+    at(resource) {
+        return /*Alpine.store('app') && !Alpine.store('app').loading &&*/ this.route[1] === resource;
+    },
+    id() {
+        return this.route[2];
+    },
+    param(name) {
+    this.updateRouteFromHash(); //??
+        return this.params[name];
+    },
+    navigate(to, params) {
+        let hash;
+        if (typeof to === 'string') {
+            hash = to;
+        } else {
+            hash = to.target.getAttribute('href');
+        }
+        if (params && Object.keys(params).length !== 0) {
+            hash += paramsToString(params);
+        }
+        window.location.hash = hash;
+    },
+    set(name, value) {
+        this.updateRouteFromHash();
+        this.params[name] = value;
+        window.location.hash = this.hash_from_route();
+    },
+    unset(name) {
+        this.updateRouteFromHash();
+        delete this.params[name];
+        window.location.hash = this.hashFromRoute();
+    },
+    updateRouteFromHash() {
+        const hash = window.location.hash;
+        let path, params;
+        if (hash.includes('?')) {
+            [path, params] = hash.split('?');
+            params = Object.fromEntries(params.split('&').map(entry => entry.split('=')));
+        } else {
+            path = hash;
+            params = {};
+        }
+        const route = path.split('/');
+        if (route[0] === '') {
+            route.unshift('#');
+        }
+        this.route = route;
+        this.params = params;
+    },
+    hashFromRoute() {
+        let hash = this.route.join('/');
+        if (Object.keys(this.params).length > 0) {
+            hash += paramsToString(this.params);
+        }
+        return hash;
+    }
+};
+
+document.addEventListener('alpine:init', () => {
+    Alpine.store('router', routerStore);
+});
+        </script>
+    </body>
+</html>
