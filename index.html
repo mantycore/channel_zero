@@ -43,6 +43,9 @@
             .posts > article > .article > .data {
                 flex: 1;
             }
+            .post {
+                white-space: pre-wrap;
+            }
             .icon {
                 font-size: 32px;
                 font-weight: bold;
@@ -135,7 +138,7 @@
                                                     </template>
                                                     <span class="date" x-text="new Date(post.plain.created_at * 1000).toJSON()"></span>
                                                 </div>
-                                                <div x-html="post.plain.content.replace(/\n/g, '<br>')">
+                                                <div class="post" x-text="post.plain.content">
                                             </div>
                                         </div>
                                     </template>
