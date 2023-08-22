@@ -87,7 +87,7 @@
                                 <button @click="completeLogin('NIP-07')">Залогиниться через расширение браузера (предпочтительно)</button>
                             </p>
                         </template>
-                    </div>    
+                    </div>
                 </template>
                 <template x-if="$store.router.at('login_with_private_key')">
                     <div>
@@ -153,25 +153,32 @@
                                                 <div><em>теперь зовётся <span x-text="JSON.parse(post.plain.content).name"></span></em></div>
                                             </div>
                                         </div>
-                                    </template>                                    
+                                    </template>
                                 </article>
                             </template>
                         </template>
                     </div>
-                    <template x-if="optionsShowed">
-                        <div style="display: flex; width: 100%;">
-                            <template x-if="!optionsNameShowed">
-                                <button @click="optionsNameShowed = true">Изменить имя</button>
-                            </template>
-                            <template x-if="optionsNameShowed">
-                                <div style="display: flex;">
-                                    <label>Введите новое имя: <input x-model="screenname" @keyup.enter="saveName()"></label><button @click="saveName()">Сохранить</button><button @click="optionsNameShowed = false">Отмена</button>
-                                </div>
-                            </template>
-                        </div>
-                    </template>
+                    <div
+                        x-data="{
+                            open: false,
+                            nameOpen: false
+                        }"
+                        @toggle-menu.window="open = !open"
+                        @click.away="open = false"
+                        x-show="open"
+                        style="display: flex; width: 100%;"
+                    >
+                        <template x-if="!nameOpen">
+                            <button @click="nameOpen = true">Изменить имя</button>
+                        </template>
+                        <template x-if="nameOpen">
+                            <div style="display: flex;">
+                                <label>Введите новое имя: <input x-model="screenname" @keyup.enter="saveName()"></label><button @click="saveName()">Сохранить</button><button @click="nameOpen = false">Отмена</button>
+                            </div>
+                        </template>
+                    </div>
                     <div style="display: flex; width: 100%;">
-                        <button @click="optionsShowed = !optionsShowed">⚙</button>
+                        <button @click="$dispatch('toggle-menu', {})">⚙</button>
                         <textarea
                             x-data="{ctrlPressed: false}"
                             x-init="$el.style.height = '5px'; $el.style.height = ($el.scrollHeight) + 'px';"
@@ -191,8 +198,6 @@
 const pool = new window.NostrTools.SimplePool();
 const relays = ['wss://relay.anoma.li', 'wss://relay01.anoma.li'];
 const main = () => ({
-    optionsShowed: false,
-    optionsNameShowed: false,
     screenname: '', //TODO: screenname per channel!
     screennameTimestamp: 0,
     async saveName() {
@@ -280,7 +285,7 @@ const main = () => ({
         }
 
         //TODO: handle redirect
-        
+
         Alpine.store('router').navigate('/ch/ebdb4d1649d8dd8f6e4e355353738f936c45f63977770928ba039ffc18dd01d2');
     },
     createAccount() {
