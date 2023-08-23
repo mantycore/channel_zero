@@ -6,118 +6,188 @@
         <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
         <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
         <style>
-            body {
-                margin: 0;
-            }
-            main {
-                max-width: 800px;
-                min-width: 600px;
-                margin: 0 auto;
-                display: flex;
-                height: 100vh;
-                max-height: 100vh;
-            }
-            .channel {
-                min-width: 600px;
-                display: flex;
-                flex-direction: column;
-            }
-            .posts {
-                flex: 1;
-                margin: 8px;
-                overflow-y: auto;
-            }
-            .channel > input {
-                margin: 8px;
-            }
-            .date {
-                color: silver;
-                font-size: 10px;
-            }
-            .posts article {
-                margin-bottom: 8px;
-            }
-            .posts > article > .article {
-                display: flex;
-            }
-            .posts > article > .article > .data {
-                flex: 1;
-            }
-            .post {
-                white-space: pre-wrap;
-            }
-            .icon {
-                font-size: 32px;
-                font-weight: bold;
-                height: 40px;
-                width: 40px;
-                margin-right: 8px;
-                color: white;
-                text-align: center;
-            }
+body {
+    margin: 0;
+}
+main {
+    max-width: 1000px;
+    min-width: 600px;
+    margin: 0 auto;
+    display: flex;
+    height: 100vh;
+    max-height: 100vh;
+}
+aside.channels {
+    margin-right: 20px;
+}
+.channel {
+    min-width: 600px;
+    display: flex;
+    flex-direction: column;
+}
+.posts {
+    flex: 1;
+    margin: 8px;
+    overflow-y: auto;
+}
+.channel > input {
+    margin: 8px;
+}
+.date {
+    color: silver;
+    font-size: 10px;
+}
+.channels section > article,
+.posts > article {
+    margin-bottom: 8px;
+}
+.channels section > article,
+.posts > article > .article {
+    display: flex;
+}
+.channels section > article > .data,
+.posts > article > .article > .data {
+    flex: 1;
+}
+.post {
+    white-space: pre-wrap;
+}
+.icon {
+    font-size: 32px;
+    font-weight: bold;
+    height: 40px;
+    width: 40px;
+    margin-right: 8px;
+    color: white;
+    text-align: center;
+}
+
+.modal {
+    background: rgba(0, 0, 0, 0.5);
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: white;
+    padding: 1em;
+    border-radius: 0.5em;
+    max-width: 90vw;
+}
         </style>
     </head>
     <body x-data="main()">
         <template x-if="settings.loginMode === null">
             <main>
-            <div>
-                <p>
-                    Ничего не показывает Тоху Боху<br>
-                    В Тоху Боху нет паттернов, нет информации, нет контента и нет формата.<br>
-                    Нет ни пульса, ни гармонии в Тоху Боху<br>
-                    Ничего не возникает в Тоху Боху, и нет у него ни места, ни существования<br>
-                    Бесчисленные реальности расходятся от Тоху Боху<br>
-                    В нулевой час есть только Тоху Боху
-                </p>
-                <p>
-                    <button @click="createAccount()">Создать новый аккаунт</button>
-                </p>
-                <!--<template x-if="$store.router.at('')">
+                <div>
                     <p>
-                        <button @click="login()">Залогиниться</button>
+                        Ничего не показывает Тоху Боху<br>
+                        В Тоху Боху нет паттернов, нет информации, нет контента и нет формата.<br>
+                        Нет ни пульса, ни гармонии в Тоху Боху<br>
+                        Ничего не возникает в Тоху Боху, и нет у него ни места, ни существования<br>
+                        Бесчисленные реальности расходятся от Тоху Боху<br>
+                        В нулевой час есть только Тоху Боху
                     </p>
-                </template>
-                <template x-if="$store.router.at('login')">
-                    <div>
+                    <p>
+                        <button @click="createAccount()">Создать новый аккаунт</button>
+                    </p>
+                    <!--<template x-if="$store.router.at('')">
                         <p>
-                            <button @click="$store.router.navigate('/login_with_private_key')">Залогиниться вводом приватного ключа</button>
+                            <button @click="login()">Залогиниться</button>
                         </p>
-                        <template x-if="window.nostr && window.nostr.nip04">
+                    </template>
+                    <template x-if="$store.router.at('login')">
+                        <div>
                             <p>
-                                <button @click="completeLogin('NIP-07')">Залогиниться через расширение браузера (предпочтительно)</button>
+                                <button @click="$store.router.navigate('/login_with_private_key')">Залогиниться вводом приватного ключа</button>
                             </p>
-                        </template>
-                    </div>
-                </template>
-                <template x-if="$store.router.at('login_with_private_key')">
-                    <div>
-                        <label>
-                            <p>Введите приватный ключ Nostr:</p>
-                            <p><input x-model="settings.privateKey"></p>
-                        </label>
-                        <p>
-                            <button @click="completeLogin('privateKey')">Вход</button>
-                        </p>
-                    </div>
-                </template>-->
-            </div>
+                            <template x-if="window.nostr && window.nostr.nip04">
+                                <p>
+                                    <button @click="completeLogin('NIP-07')">Залогиниться через расширение браузера (предпочтительно)</button>
+                                </p>
+                            </template>
+                        </div>
+                    </template>
+                    <template x-if="$store.router.at('login_with_private_key')">
+                        <div>
+                            <label>
+                                <p>Введите приватный ключ Nostr:</p>
+                                <p><input x-model="settings.privateKey"></p>
+                            </label>
+                            <p>
+                                <button @click="completeLogin('privateKey')">Вход</button>
+                            </p>
+                        </div>
+                    </template>-->
+                </div>
             </main>
         </template>
         <template x-if="settings.loginMode !== null">
             <main>
-                <!--
-                <aside>
-                    <input placeholder="Найти канал">
-                    <button @click="createNewChannel()">Создать новый канал</button>
+
+                <!-- левая колонка основного интерфейса чата: список каналов -->
+                <aside class="channels">
+                    <section style="margin-bottom: 20px;">
+                        <input
+                            x-data="{invite: ''}"
+                            x-model="invite"
+                            placeholder="Открыть приглашение"
+                            @keyup.enter="openInvite(invite)"
+                        >
+                    </section>
+                    <section>
+                        <template x-for="channel in getChannels()">
+                            <article
+                                style="cursor: pointer"
+                                @click="$store.router.navigate(`/ch/${channel[0]}`)"
+                            >
+                                <div class="icon"
+                                    x-bind:style="`background-color: #${channel[0].substring(0, 6)}`"
+                                    x-text="String.fromCharCode(0x2300 + parseInt(channel[0].substring(6, 8), 16))"
+                                ></div>
+                                <div class="data">
+                                    <template x-if="channel[1].name">
+                                        <span x-text="channel[1].name" />
+                                    </template>
+                                </div>
+                            </article>
+                        </template>
+                    </section>
+                    <section style="margin-top: 20px;">
+                        <button
+                            @click="$dispatch('open-new-channel-dialog', {})"
+                        >Создать новый канал</button>
+                    </section>
                 </aside>
-                -->
+
+                <!-- центральная колонка основного интерфейса чата -->
                 <div class="channel">
+                    <template x-if="$store.router.at('ch')">
+                        <a
+                            href="#"
+                            @click.prevent="copyChannelInvite($store.router.id())"
+                            title="Скопировать секретный ключ чата, служащий приглашением, в буфер обмена"
+                        >Скопировать приглашение</a>
+                    </template>
                     <div class="posts" >
                         <template x-if="events && $store.router.at('ch')">
                             <template x-for="post in getPosts($store.router.id())" >
-                                <article>
-                                    <template x-if="post.plain.kind === 400" x-effect="$nextTick(() => scrollDown($el));">
-                                        <div class="article">
+                                <article x-data="{
+                                    scrollDown(element) {
+                                        const posts = element.closest('.posts');
+                                        posts.scrollTo(0, posts.scrollHeight);
+                                    }
+                                }">
+
+                                    <!-- Событие создания канала -->
+                                    <template x-if="post.plain.kind === 400">
+                                        <div class="article" x-effect="$nextTick(() => scrollDown($el));">
                                             <div class="icon"></div>
                                             <div class="data">
                                                 <div class="date" x-text="new Date(post.plain.created_at * 1000).toJSON()"></div>
@@ -125,12 +195,15 @@
                                             </div>
                                         </div>
                                     </template>
+
+                                    <!-- Обычное текстовое сообщение -->
                                     <template x-if="post.plain.kind === 403">
                                         <div class="article" x-effect="$nextTick(() => scrollDown($el));">
                                             <div class="icon"
                                                 x-bind:style="`background-color: #${post.plain.pubkey.substring(0, 6)}`"
                                                 x-text="String.fromCharCode(0x2300 + parseInt(post.plain.pubkey.substring(6, 8), 16))"
                                             ></div>
+
                                             <div class="data">
                                                 <div>
                                                     <template x-if="post.plain.tags.find(tag => tag[0] === 'screenname')">
@@ -142,6 +215,8 @@
                                             </div>
                                         </div>
                                     </template>
+
+                                    <!-- Переименование участника -->
                                     <template x-if="post.plain.kind === 410">
                                         <div class="article" x-effect="$nextTick(() => scrollDown($el));">
                                             <div class="icon"
@@ -154,10 +229,13 @@
                                             </div>
                                         </div>
                                     </template>
+
                                 </article>
                             </template>
                         </template>
                     </div>
+
+                    <!-- Меню опций сообщения -->
                     <div
                         x-data="{
                             open: false,
@@ -177,6 +255,8 @@
                             </div>
                         </template>
                     </div>
+
+                    <!-- Поле ввода нового сообщения -->
                     <div style="display: flex; width: 100%;">
                         <button @click="$dispatch('toggle-menu', {})">⚙</button>
                         <textarea
@@ -194,6 +274,40 @@
                 </div>
             </main>
         </template>
+
+        <!-- Модальное окно создания нового канала -->
+        <div
+            x-data="{
+                open: false,
+                name: '',
+                openModal() {
+                    this.open = true;
+                    this.name = '';
+                },
+                create() {
+                    this.open = false;
+                    createNewChannel(this.name);
+                }
+            }"
+            x-show="open"
+            @open-new-channel-dialog.window="openModal()"
+            class="modal"
+        >
+            <div
+                class="modal-content"
+                @click.away="open = false"
+            >
+                <p>
+                    <label>Введите название нового канала:
+                        <input x-model="name">
+                    </label>
+                </p>
+                <p>
+                    <button @click="create()">Создать</button>
+                </p>
+            </div>
+        </div>
+
         <script>
 const pool = new window.NostrTools.SimplePool();
 const relays = ['wss://relay.anoma.li', 'wss://relay01.anoma.li'];
@@ -213,18 +327,31 @@ const main = () => ({
     events: {},
     sub: null,
     postText: '',
-    scrollDown(element) {
-        const posts = element.closest('.posts');
-        posts.scrollTo(0, posts.scrollHeight);
+    copyChannelInvite(channelPublicKey) {
+        const privateKey = this.settings.channels[channelPublicKey].privateKey;
+        copyTextToClipboard(privateKey);
+    },
+    openInvite(invite) {
+        const publicKey = window.NostrTools.getPublicKey(invite);
+        if (!this.settings.channels[publicKey]) {
+            this.settings.channels[publicKey] = {privateKey: invite};
+            this.resub();
+            window.localStorage.setItem('settings', JSON.stringify(this.settings));
+        }
+    },
+    getChannels() {
+        return Object.entries(this.settings.channels);
     },
     getPosts(channelPublicKey) {
-        let posts = Object.values(this.events).filter(event => event.cypher.tags[0][1] === channelPublicKey);
+        let posts = Object.values(this.events).filter(event =>
+            event.cypher.tags[0][1] === channelPublicKey);
         posts = posts.sort((a, b) => a.plain.created_at - b.plain.created_at);
         return posts;
     },
     async processEvent(event) {
+        const channelPublicKey = event.tags[0][1]
         const json = await window.NostrTools.nip04.decrypt(
-            this.settings.channels[event.tags[0][1]].privateKey,
+            this.settings.channels[channelPublicKey].privateKey,
             event.pubkey,
             event.content
         );
@@ -232,12 +359,26 @@ const main = () => ({
         this.events[event.id] = {
             cypher: event,
             plain: plainEvent
+        };
+
+        if (plainEvent.kind === 400) {
+            Object.assign(
+                this.settings.channels[channelPublicKey],
+                JSON.parse(plainEvent.content)
+            );
+            window.localStorage.setItem('settings', JSON.stringify(this.settings));
         }
-        if (plainEvent.kind === 410 && plainEvent.pubkey === this.settings.publicKey && plainEvent.created_at > this.screennameTimestamp) {
+
+        if (
+            plainEvent.kind === 410
+            && plainEvent.pubkey === this.settings.publicKey
+            && plainEvent.created_at > this.screennameTimestamp
+        ) {
             this.screenname = JSON.parse(plainEvent.content).name;
             this.screennameTimestamp = plainEvent.created_at;
         }
     },
+    /* Обновить набор подписок из settings.channels */
     resub() {
         if (this.sub !== null) {
             this.sub.unsub();
@@ -259,10 +400,7 @@ const main = () => ({
         }
         const i = Alpine.store('router').param('i');
         if (i !== undefined) {
-            const publicKey = window.NostrTools.getPublicKey(i);
-            this.settings.channels[publicKey] = {privateKey: i};
-            this.resub();
-            window.localStorage.setItem('settings', JSON.stringify(this.settings));
+            this.openInvite(i);
             Alpine.store('router').unset('i');
         }
     },
@@ -272,7 +410,7 @@ const main = () => ({
             : Alpine.store('router').navigate('/login_with_private_key');
     },
     async completeLogin(mode) {
-        if(mode === 'NIP-07' || this.settings.privateKey !== '') {
+        if (mode === 'NIP-07' || this.settings.privateKey !== '') {
             this.settings.loginMode = mode;
             //TODO: check correctness
             if(mode === 'privateKey') {
@@ -318,31 +456,30 @@ const main = () => ({
         };
         this.send(wrappedEvent);
     },
-    async createNewChannel() {
-        const name = 'Изнанки';
+    /* Создать новый канал */
+    async createNewChannel(name) {
         const channelPrivateKey = window.NostrTools.generatePrivateKey();
         const channelPublicKey = window.NostrTools.getPublicKey(channelPrivateKey);
-        const content = JSON.stringify({name});
+        const content = JSON.stringify({ name });
 
         const event = {
             content,
             kind: 400,
-            tags: [["r", "wss://anoma.ch"]]
+            tags: [["r", "wss://relay.anoma.li"]]
         };
         await this.giftWrap(event, channelPublicKey);
-        //console.log(`https://zero.anoma.ch/#/i/${channelPrivateKey}`)
         this.settings.channels[channelPublicKey] = {privateKey: channelPrivateKey, name}
         window.localStorage.setItem('settings', JSON.stringify(this.settings));
-        this.resub()
+        this.resub();
         Alpine.store('router').navigate(`/ch/${channelPublicKey}`);
     },
+    /* Отправить новое текстовое сообщение */
     async sendPost() {
-        console.log("sendPost");
         const channelPublicKey = Alpine.store('router').id(); //TODO: check correctness
         const event = {
             content: this.postText,
             kind: 403,
-            tags: [["e", channelPublicKey, "wss://anoma.ch"]]
+            tags: [["e", channelPublicKey, "wss://relay.anoma.li"]]
         };
         if (this.screenname !== "") {
             event.tags.push(["screenname", this.screenname]);
@@ -401,7 +538,7 @@ const routerStore = {
     set(name, value) {
         this.updateRouteFromHash();
         this.params[name] = value;
-        window.location.hash = this.hash_from_route();
+        window.location.hash = this.hashFromRoute();
     },
     unset(name) {
         this.updateRouteFromHash();
@@ -437,6 +574,43 @@ const routerStore = {
 document.addEventListener('alpine:init', () => {
     Alpine.store('router', routerStore);
 });
+
+// https://stackoverflow.com/questions/400212/how-do-i-copy-to-the-clipboard-in-javascript
+function fallbackCopyTextToClipboard(text) {
+  var textArea = document.createElement("textarea");
+  textArea.value = text;
+
+  // Avoid scrolling to bottom
+  textArea.style.top = "0";
+  textArea.style.left = "0";
+  textArea.style.position = "fixed";
+
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+
+  try {
+    var successful = document.execCommand('copy');
+    var msg = successful ? 'successful' : 'unsuccessful';
+    //console.log('Fallback: Copying text command was ' + msg);
+  } catch (err) {
+    //console.error('Fallback: Oops, unable to copy', err);
+  }
+
+  document.body.removeChild(textArea);
+}
+
+function copyTextToClipboard(text) {
+  if (!navigator.clipboard) {
+    fallbackCopyTextToClipboard(text);
+    return;
+  }
+  navigator.clipboard.writeText(text).then(function() {
+    //console.log('Async: Copying to clipboard was successful!');
+  }, function(err) {
+    //console.error('Async: Could not copy text: ', err);
+  });
+}
         </script>
     </body>
 </html>
