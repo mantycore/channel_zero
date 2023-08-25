@@ -183,6 +183,20 @@ aside.channels {
                                     </div>
                                 </template>
 
+                                <!-- Появление участника -->
+                                <template x-if="post.plain.kind === 411">
+                                    <div class="article" x-effect="$nextTick(() => scrollDown($el));">
+                                        <div class="icon"
+                                            x-bind:style="`background-color: #${post.plain.pubkey.substring(0, 6)}`"
+                                            x-text="String.fromCharCode(0x2300 + parseInt(post.plain.pubkey.substring(6, 8), 16))"
+                                        ></div>
+                                        <div class="data">
+                                            <div class="date" x-text="new Date(post.plain.created_at * 1000).toJSON()"></div>
+                                            <div><em>присоединяется к группе</em></div>
+                                        </div>
+                                    </div>
+                                </template>
+
                             </article>
                         </template>
                     </template>
@@ -279,6 +293,7 @@ const main = () => ({
     events: {},
     sub: null,
     postText: '',
+
     copyChannelInvite(channelPublicKey) {
         const privateKey = this.settings.channels[channelPublicKey].privateKey;
         copyTextToClipboard(privateKey);
@@ -360,15 +375,21 @@ const main = () => ({
             Alpine.store('router').unset('i');
             const channelPublicKey = window.NostrTools.getPublicKey(inviteKey);
             Alpine.store('router').navigate(`/ch/${channelPublicKey}`);
+            this.announceJoin(channelPublicKey);
         }
     },
+    /* Общие функции отправки нового сообщения */
     sign(event, privateKey) {
         event.pubkey = window.NostrTools.getPublicKey(privateKey);
         event.id = window.NostrTools.getEventHash(event);
         event.sig = window.NostrTools.getSignature(event, privateKey);
         return event;
     },
+    send(event) {
+        pool.publish(relays, event);
+    },
     async giftWrap(event, destination) {
+        //TODO: подумать о том, чтобы в тэги event добавить приватный ключ канала
         event.created_at = Math.floor(Date.now() / 1000);
         const signedEvent = this.sign(event, this.settings.privateKey);
         const privateKey = window.NostrTools.generatePrivateKey();
@@ -416,17 +437,24 @@ const main = () => ({
         await this.giftWrap(event, channelPublicKey);
         this.postText = '';
     },
+    /* Обновить метаданные пользователя (пока только имя) */
     async updateUserMetadata() {
         const channelPublicKey = Alpine.store('router').id(); //TODO: check correctness
         const event = {
             content: JSON.stringify({name: this.screenname}), // about, picture
             kind: 410, // == non-wrapped 0
-            tags: [["e", channelPublicKey, "wss://anoma.ch"]]
+            tags: [["e", channelPublicKey, "wss://relay.anoma.li"]]
         }
         await this.giftWrap(event, channelPublicKey);
     },
-    send(event) {
-        pool.publish(relays, event);
+    /* Объявить на канале о присоединении к нему */
+    async announceJoin(channelPublicKey) {
+        const event = {
+            content: "",
+            kind: 411, // no precedent
+            tags: [["e", channelPublicKey, "wss://relay.anoma.li"]]
+        }
+        await this.giftWrap(event, channelPublicKey);
     }
 });
 
