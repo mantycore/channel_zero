@@ -115,7 +115,7 @@ aside.channels {
                 <section style="margin-top: 20px;">
                     <button
                         @click="$dispatch('open-new-channel-dialog', {})"
-                    >Создать новый канал</button>
+                    >Создать новую группу</button>
                 </section>
             </aside>
 
@@ -144,7 +144,7 @@ aside.channels {
                                         <div class="icon"></div>
                                         <div class="data">
                                             <div class="date" x-text="new Date(post.plain.created_at * 1000).toJSON()"></div>
-                                            Канал был создан
+                                            Группа была создана.
                                         </div>
                                     </div>
                                 </template>
@@ -250,7 +250,7 @@ aside.channels {
                 @click.away="open = false"
             >
                 <p>
-                    <label>Введите название нового канала:
+                    <label>Введите название новой группы:
                         <input x-model="name">
                     </label>
                 </p>
