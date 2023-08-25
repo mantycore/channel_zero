@@ -83,197 +83,149 @@ aside.channels {
         </style>
     </head>
     <body x-data="main()">
-        <template x-if="settings.loginMode === null">
-            <main>
-                <div>
-                    <p>
-                        Ничего не показывает Тоху Боху<br>
-                        В Тоху Боху нет паттернов, нет информации, нет контента и нет формата.<br>
-                        Нет ни пульса, ни гармонии в Тоху Боху<br>
-                        Ничего не возникает в Тоху Боху, и нет у него ни места, ни существования<br>
-                        Бесчисленные реальности расходятся от Тоху Боху<br>
-                        В нулевой час есть только Тоху Боху
-                    </p>
-                    <p>
-                        <button @click="createAccount()">Создать новый аккаунт</button>
-                    </p>
-                    <!--<template x-if="$store.router.at('')">
-                        <p>
-                            <button @click="login()">Залогиниться</button>
-                        </p>
-                    </template>
-                    <template x-if="$store.router.at('login')">
-                        <div>
-                            <p>
-                                <button @click="$store.router.navigate('/login_with_private_key')">Залогиниться вводом приватного ключа</button>
-                            </p>
-                            <template x-if="window.nostr && window.nostr.nip04">
-                                <p>
-                                    <button @click="completeLogin('NIP-07')">Залогиниться через расширение браузера (предпочтительно)</button>
-                                </p>
-                            </template>
-                        </div>
-                    </template>
-                    <template x-if="$store.router.at('login_with_private_key')">
-                        <div>
-                            <label>
-                                <p>Введите приватный ключ Nostr:</p>
-                                <p><input x-model="settings.privateKey"></p>
-                            </label>
-                            <p>
-                                <button @click="completeLogin('privateKey')">Вход</button>
-                            </p>
-                        </div>
-                    </template>-->
-                </div>
-            </main>
-        </template>
-        <template x-if="settings.loginMode !== null">
-            <main>
-
-                <!-- левая колонка основного интерфейса чата: список каналов -->
-                <aside class="channels">
-                    <section style="margin-bottom: 20px;">
-                        <input
-                            x-data="{invite: ''}"
-                            x-model="invite"
-                            placeholder="Открыть приглашение"
-                            @keyup.enter="openInvite(invite)"
+        <main>
+            <!-- левая колонка основного интерфейса чата: список каналов -->
+            <aside class="channels">
+                <section style="margin-bottom: 20px;">
+                    <input
+                        x-data="{invite: ''}"
+                        x-model="invite"
+                        placeholder="Открыть приглашение"
+                        @keyup.enter="openInvite(invite)"
+                    >
+                </section>
+                <section>
+                    <template x-for="channel in getChannels()">
+                        <article
+                            style="cursor: pointer"
+                            @click="$store.router.navigate(`/ch/${channel[0]}`)"
                         >
-                    </section>
-                    <section>
-                        <template x-for="channel in getChannels()">
-                            <article
-                                style="cursor: pointer"
-                                @click="$store.router.navigate(`/ch/${channel[0]}`)"
-                            >
-                                <div class="icon"
-                                    x-bind:style="`background-color: #${channel[0].substring(0, 6)}`"
-                                    x-text="String.fromCharCode(0x2300 + parseInt(channel[0].substring(6, 8), 16))"
-                                ></div>
-                                <div class="data">
-                                    <template x-if="channel[1].name">
-                                        <span x-text="channel[1].name" />
-                                    </template>
-                                </div>
+                            <div class="icon"
+                                x-bind:style="`background-color: #${channel[0].substring(0, 6)}`"
+                                x-text="String.fromCharCode(0x2300 + parseInt(channel[0].substring(6, 8), 16))"
+                            ></div>
+                            <div class="data">
+                                <template x-if="channel[1].name">
+                                    <span x-text="channel[1].name" />
+                                </template>
+                            </div>
+                        </article>
+                    </template>
+                </section>
+                <section style="margin-top: 20px;">
+                    <button
+                        @click="$dispatch('open-new-channel-dialog', {})"
+                    >Создать новый канал</button>
+                </section>
+            </aside>
+
+            <!-- центральная колонка основного интерфейса чата -->
+            <div class="channel">
+                <template x-if="$store.router.at('ch')">
+                    <a
+                        href="#"
+                        @click.prevent="copyChannelInvite($store.router.id())"
+                        title="Скопировать секретный ключ чата, служащий приглашением, в буфер обмена"
+                    >Скопировать приглашение</a>
+                </template>
+                <div class="posts" >
+                    <template x-if="events && $store.router.at('ch')">
+                        <template x-for="post in getPosts($store.router.id())" >
+                            <article x-data="{
+                                scrollDown(element) {
+                                    const posts = element.closest('.posts');
+                                    posts.scrollTo(0, posts.scrollHeight);
+                                }
+                            }">
+
+                                <!-- Событие создания канала -->
+                                <template x-if="post.plain.kind === 400">
+                                    <div class="article" x-effect="$nextTick(() => scrollDown($el));">
+                                        <div class="icon"></div>
+                                        <div class="data">
+                                            <div class="date" x-text="new Date(post.plain.created_at * 1000).toJSON()"></div>
+                                            Канал был создан
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- Обычное текстовое сообщение -->
+                                <template x-if="post.plain.kind === 403">
+                                    <div class="article" x-effect="$nextTick(() => scrollDown($el));">
+                                        <div class="icon"
+                                            x-bind:style="`background-color: #${post.plain.pubkey.substring(0, 6)}`"
+                                            x-text="String.fromCharCode(0x2300 + parseInt(post.plain.pubkey.substring(6, 8), 16))"
+                                        ></div>
+
+                                        <div class="data">
+                                            <div>
+                                                <template x-if="post.plain.tags.find(tag => tag[0] === 'screenname')">
+                                                    <strong><span x-text="post.plain.tags.find(tag => tag[0] === 'screenname')[1]"></span></strong>
+                                                </template>
+                                                <span class="date" x-text="new Date(post.plain.created_at * 1000).toJSON()"></span>
+                                            </div>
+                                            <div class="post" x-text="post.plain.content">
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- Переименование участника -->
+                                <template x-if="post.plain.kind === 410">
+                                    <div class="article" x-effect="$nextTick(() => scrollDown($el));">
+                                        <div class="icon"
+                                            x-bind:style="`background-color: #${post.plain.pubkey.substring(0, 6)}`"
+                                            x-text="String.fromCharCode(0x2300 + parseInt(post.plain.pubkey.substring(6, 8), 16))"
+                                        ></div>
+                                        <div class="data">
+                                            <div class="date" x-text="new Date(post.plain.created_at * 1000).toJSON()"></div>
+                                            <div><em>теперь зовётся <span x-text="JSON.parse(post.plain.content).name"></span></em></div>
+                                        </div>
+                                    </div>
+                                </template>
+
                             </article>
                         </template>
-                    </section>
-                    <section style="margin-top: 20px;">
-                        <button
-                            @click="$dispatch('open-new-channel-dialog', {})"
-                        >Создать новый канал</button>
-                    </section>
-                </aside>
-
-                <!-- центральная колонка основного интерфейса чата -->
-                <div class="channel">
-                    <template x-if="$store.router.at('ch')">
-                        <a
-                            href="#"
-                            @click.prevent="copyChannelInvite($store.router.id())"
-                            title="Скопировать секретный ключ чата, служащий приглашением, в буфер обмена"
-                        >Скопировать приглашение</a>
                     </template>
-                    <div class="posts" >
-                        <template x-if="events && $store.router.at('ch')">
-                            <template x-for="post in getPosts($store.router.id())" >
-                                <article x-data="{
-                                    scrollDown(element) {
-                                        const posts = element.closest('.posts');
-                                        posts.scrollTo(0, posts.scrollHeight);
-                                    }
-                                }">
-
-                                    <!-- Событие создания канала -->
-                                    <template x-if="post.plain.kind === 400">
-                                        <div class="article" x-effect="$nextTick(() => scrollDown($el));">
-                                            <div class="icon"></div>
-                                            <div class="data">
-                                                <div class="date" x-text="new Date(post.plain.created_at * 1000).toJSON()"></div>
-                                                Канал был создан
-                                            </div>
-                                        </div>
-                                    </template>
-
-                                    <!-- Обычное текстовое сообщение -->
-                                    <template x-if="post.plain.kind === 403">
-                                        <div class="article" x-effect="$nextTick(() => scrollDown($el));">
-                                            <div class="icon"
-                                                x-bind:style="`background-color: #${post.plain.pubkey.substring(0, 6)}`"
-                                                x-text="String.fromCharCode(0x2300 + parseInt(post.plain.pubkey.substring(6, 8), 16))"
-                                            ></div>
-
-                                            <div class="data">
-                                                <div>
-                                                    <template x-if="post.plain.tags.find(tag => tag[0] === 'screenname')">
-                                                        <strong><span x-text="post.plain.tags.find(tag => tag[0] === 'screenname')[1]"></span></strong>
-                                                    </template>
-                                                    <span class="date" x-text="new Date(post.plain.created_at * 1000).toJSON()"></span>
-                                                </div>
-                                                <div class="post" x-text="post.plain.content">
-                                            </div>
-                                        </div>
-                                    </template>
-
-                                    <!-- Переименование участника -->
-                                    <template x-if="post.plain.kind === 410">
-                                        <div class="article" x-effect="$nextTick(() => scrollDown($el));">
-                                            <div class="icon"
-                                                x-bind:style="`background-color: #${post.plain.pubkey.substring(0, 6)}`"
-                                                x-text="String.fromCharCode(0x2300 + parseInt(post.plain.pubkey.substring(6, 8), 16))"
-                                            ></div>
-                                            <div class="data">
-                                                <div class="date" x-text="new Date(post.plain.created_at * 1000).toJSON()"></div>
-                                                <div><em>теперь зовётся <span x-text="JSON.parse(post.plain.content).name"></span></em></div>
-                                            </div>
-                                        </div>
-                                    </template>
-
-                                </article>
-                            </template>
-                        </template>
-                    </div>
-
-                    <!-- Меню опций сообщения -->
-                    <div
-                        x-data="{
-                            open: false,
-                            nameOpen: false
-                        }"
-                        @toggle-menu.window="open = !open"
-                        @click.away="open = false"
-                        x-show="open"
-                        style="display: flex; width: 100%;"
-                    >
-                        <template x-if="!nameOpen">
-                            <button @click="nameOpen = true">Изменить имя</button>
-                        </template>
-                        <template x-if="nameOpen">
-                            <div style="display: flex;">
-                                <label>Введите новое имя: <input x-model="screenname" @keyup.enter="saveName()"></label><button @click="saveName()">Сохранить</button><button @click="nameOpen = false">Отмена</button>
-                            </div>
-                        </template>
-                    </div>
-
-                    <!-- Поле ввода нового сообщения -->
-                    <div style="display: flex; width: 100%;">
-                        <button @click="$dispatch('toggle-menu', {})">⚙</button>
-                        <textarea
-                            x-data="{ctrlPressed: false}"
-                            x-init="$el.style.height = '5px'; $el.style.height = ($el.scrollHeight) + 'px';"
-                            @input="$el.style.height = '5px'; $el.style.height = ($el.scrollHeight) + 'px';"
-                            x-model="postText"
-                            @keydown.ctrl="ctrlPressed = true"
-                            @keyup.ctrl="ctrlPressed = false"
-                            @keyup.enter="if (ctrlPressed) { sendPost(); }"
-                            style="flex: 1;"
-                        ></textarea>
-                        <button @click="sendPost()">Отправить</button>
-                    </div>
                 </div>
-            </main>
-        </template>
+
+                <!-- Меню опций сообщения -->
+                <div
+                    x-data="{
+                        open: false,
+                        nameOpen: false
+                    }"
+                    @toggle-menu.window="open = !open"
+                    @click.away="open = false"
+                    x-show="open"
+                    style="display: flex; width: 100%;"
+                >
+                    <template x-if="!nameOpen">
+                        <button @click="nameOpen = true">Изменить имя</button>
+                    </template>
+                    <template x-if="nameOpen">
+                        <div style="display: flex;">
+                            <label>Введите новое имя: <input x-model="screenname" @keyup.enter="saveName()"></label><button @click="saveName()">Сохранить</button><button @click="nameOpen = false">Отмена</button>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Поле ввода нового сообщения -->
+                <div style="display: flex; width: 100%;">
+                    <button @click="$dispatch('toggle-menu', {})">⚙</button>
+                    <textarea
+                        x-data="{ctrlPressed: false}"
+                        x-init="$el.style.height = '5px'; $el.style.height = ($el.scrollHeight) + 'px';"
+                        @input="$el.style.height = '5px'; $el.style.height = ($el.scrollHeight) + 'px';"
+                        x-model="postText"
+                        @keydown.ctrl="ctrlPressed = true"
+                        @keyup.ctrl="ctrlPressed = false"
+                        @keyup.enter="if (ctrlPressed) { sendPost(); }"
+                        style="flex: 1;"
+                    ></textarea>
+                    <button @click="sendPost()">Отправить</button>
+                </div>
+            </div>
+        </main>
 
         <!-- Модальное окно создания нового канала -->
         <div
@@ -393,45 +345,22 @@ const main = () => ({
         const settings = window.localStorage.getItem('settings');
         if (settings !== null) {
             this.settings = JSON.parse(settings);
-            if (this.settings.channels === undefined) {
-                this.settings.channels = {}
-            }
             this.resub();
-        }
-        const i = Alpine.store('router').param('i');
-        if (i !== undefined) {
-            this.openInvite(i);
-            Alpine.store('router').unset('i');
-        }
-    },
-    login() {
-        window.nostr && window.nostr.nip04
-            ? Alpine.store('router').navigate('/login')
-            : Alpine.store('router').navigate('/login_with_private_key');
-    },
-    async completeLogin(mode) {
-        if (mode === 'NIP-07' || this.settings.privateKey !== '') {
-            this.settings.loginMode = mode;
-            //TODO: check correctness
-            if(mode === 'privateKey') {
-                const publicKey = window.NostrTools.getPublicKey(this.settings.privateKey)
-                this.settings.publicKey = publicKey;
-            } else {
-                this.settings.publicKey = await window.nostr.getPublicKey();
-            }
+        } else {
+            /* автоматическое создание нового профиля */
+            this.settings.privateKey = window.NostrTools.generatePrivateKey();
+            this.settings.publicKey = window.NostrTools.getPublicKey(this.settings.privateKey);
+            this.settings.loginMode = 'privateKey';
             window.localStorage.setItem('settings', JSON.stringify(this.settings));
         }
 
-        //TODO: handle redirect
-
-        Alpine.store('router').navigate('/ch/ebdb4d1649d8dd8f6e4e355353738f936c45f63977770928ba039ffc18dd01d2');
-    },
-    createAccount() {
-        this.settings.privateKey = window.NostrTools.generatePrivateKey();
-        this.settings.publicKey = window.NostrTools.getPublicKey(this.settings.privateKey);
-        this.settings.loginMode = 'privateKey';
-        window.localStorage.setItem('settings', JSON.stringify(this.settings));
-        Alpine.store('router').navigate('/ch/ebdb4d1649d8dd8f6e4e355353738f936c45f63977770928ba039ffc18dd01d2');
+        const inviteKey = Alpine.store('router').param('i');
+        if (inviteKey !== undefined) {
+            this.openInvite(inviteKey);
+            Alpine.store('router').unset('i');
+            const channelPublicKey = window.NostrTools.getPublicKey(inviteKey);
+            Alpine.store('router').navigate(`/ch/${channelPublicKey}`);
+        }
     },
     sign(event, privateKey) {
         event.pubkey = window.NostrTools.getPublicKey(privateKey);
