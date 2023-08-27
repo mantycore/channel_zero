@@ -275,6 +275,9 @@ aside.channels {
         </div>
 
         <script>
+
+const PROTOCOL_VERSION = 'ch_0 0.0.1';
+
 const pool = new window.NostrTools.SimplePool();
 const relays = ['wss://relay.anoma.li', 'wss://relay01.anoma.li'];
 const main = () => ({
@@ -304,6 +307,9 @@ const main = () => ({
             this.settings.channels[publicKey] = {privateKey: invite};
             this.resub();
             window.localStorage.setItem('settings', JSON.stringify(this.settings));
+
+            Alpine.store('router').navigate(`/ch/${publicKey}`);
+            this.announceJoin(publicKey);
         }
     },
     getChannels() {
@@ -327,12 +333,16 @@ const main = () => ({
             cypher: event,
             plain: plainEvent
         };
+        //TODO: check if cypher.tags[0][1] public key matches with plain sk tag
 
         if (plainEvent.kind === 400) {
             Object.assign(
                 this.settings.channels[channelPublicKey],
                 JSON.parse(plainEvent.content)
             );
+            this.settings.channels[channelPublicKey].eventId = plainEvent.id;
+            //TODO: maybe store just whole plainEvent in channels[] values?
+
             window.localStorage.setItem('settings', JSON.stringify(this.settings));
         }
 
@@ -371,11 +381,8 @@ const main = () => ({
 
         const inviteKey = Alpine.store('router').param('i');
         if (inviteKey !== undefined) {
-            this.openInvite(inviteKey);
             Alpine.store('router').unset('i');
-            const channelPublicKey = window.NostrTools.getPublicKey(inviteKey);
-            Alpine.store('router').navigate(`/ch/${channelPublicKey}`);
-            this.announceJoin(channelPublicKey);
+            this.openInvite(inviteKey);
         }
     },
     /* Общие функции отправки нового сообщения */
@@ -388,37 +395,56 @@ const main = () => ({
     send(event) {
         pool.publish(relays, event);
     },
-    async giftWrap(event, destination) {
-        //TODO: подумать о том, чтобы в тэги event добавить приватный ключ канала
+    async giftWrap(event, channelPrivateKey) {
+        const channelPublicKey = window.NostrTools.getPublicKey(channelPrivateKey);
         event.created_at = Math.floor(Date.now() / 1000);
+
+        if(!event.tags) { event.tags = []; }
+        event.tags.push(['pv', PROTOCOL_VERSION]);
+        event.tags.push(['sk', channelPrivateKey]);
+
         const signedEvent = this.sign(event, this.settings.privateKey);
-        const privateKey = window.NostrTools.generatePrivateKey();
-        const encryptedEvent = await window.NostrTools.nip04.encrypt(privateKey, destination, JSON.stringify(signedEvent)); //TODO: use 44
+        const ephemeralPrivateKey = window.NostrTools.generatePrivateKey();
+
+        const encryptedEvent = await window.NostrTools.nip04.encrypt( //TODO: use 44
+            ephemeralPrivateKey,
+            channelPublicKey,
+            JSON.stringify(signedEvent));
+
         const wrappedEvent = this.sign({
             content: encryptedEvent,
             kind: 1059,
             created_at: Math.floor(Date.now() / 1000),
-            tags: [["p", destination]],
-        }, privateKey);
+            tags: [["p", channelPublicKey]],
+        }, ephemeralPrivateKey);
+
         this.events[wrappedEvent.id] = {
             cypher: wrappedEvent,
             plain: event
         };
         this.send(wrappedEvent);
+        return wrappedEvent;
     },
     /* Создать новый канал */
     async createNewChannel(name) {
         const channelPrivateKey = window.NostrTools.generatePrivateKey();
-        const channelPublicKey = window.NostrTools.getPublicKey(channelPrivateKey);
+
         const content = JSON.stringify({ name });
 
         const event = {
-            content,
             kind: 400,
-            tags: [["r", "wss://relay.anoma.li"]]
+            content,
+            tags: [['r', 'wss://relay.anoma.li']]
         };
-        await this.giftWrap(event, channelPublicKey);
-        this.settings.channels[channelPublicKey] = {privateKey: channelPrivateKey, name}
+
+        const wrappedEvent = await this.giftWrap(event, channelPrivateKey);
+        const channelPublicKey = wrappedEvent.tags[0][1];
+
+        this.settings.channels[channelPublicKey] = {
+            eventId: wrappedEvent.id,
+            privateKey: channelPrivateKey,
+            name
+        };
         window.localStorage.setItem('settings', JSON.stringify(this.settings));
         this.resub();
         Alpine.store('router').navigate(`/ch/${channelPublicKey}`);
@@ -426,35 +452,43 @@ const main = () => ({
     /* Отправить новое текстовое сообщение */
     async sendPost() {
         const channelPublicKey = Alpine.store('router').id(); //TODO: check correctness
+        const channel = this.settings.channels[channelPublicKey];
+
         const event = {
-            content: this.postText,
             kind: 403,
-            tags: [["e", channelPublicKey, "wss://relay.anoma.li"]]
+            content: this.postText,
+            tags: [['e', channel.eventId, 'wss://relay.anoma.li', 'root']]
         };
+
         if (this.screenname !== "") {
-            event.tags.push(["screenname", this.screenname]);
+            event.tags.push(['screenname', this.screenname]);
         }
-        await this.giftWrap(event, channelPublicKey);
+
+        await this.giftWrap(event, channel.privateKey);
         this.postText = '';
     },
     /* Обновить метаданные пользователя (пока только имя) */
     async updateUserMetadata() {
         const channelPublicKey = Alpine.store('router').id(); //TODO: check correctness
+        const channel = this.settings.channels[channelPublicKey];
+
         const event = {
-            content: JSON.stringify({name: this.screenname}), // about, picture
             kind: 410, // == non-wrapped 0
-            tags: [["e", channelPublicKey, "wss://relay.anoma.li"]]
+            content: JSON.stringify({name: this.screenname}), // about, picture
+            tags: [['e', channel.eventId, 'wss://relay.anoma.li']]
         }
-        await this.giftWrap(event, channelPublicKey);
+        await this.giftWrap(event, channel.privateKey);
     },
     /* Объявить на канале о присоединении к нему */
     async announceJoin(channelPublicKey) {
+        const channel = this.settings.channels[channelPublicKey];
+
         const event = {
-            content: "",
             kind: 411, // no precedent
-            tags: [["e", channelPublicKey, "wss://relay.anoma.li"]]
+            content: "",
+            tags: [['e', channel.eventId, 'wss://relay.anoma.li']]
         }
-        await this.giftWrap(event, channelPublicKey);
+        await this.giftWrap(event, channel.privateKey);
     }
 });
 
